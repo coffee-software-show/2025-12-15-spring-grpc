@@ -11,7 +11,6 @@ import org.springframework.grpc.server.GlobalServerInterceptor;
 import org.springframework.grpc.server.security.AuthenticationProcessInterceptor;
 import org.springframework.grpc.server.security.GrpcSecurity;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
@@ -42,6 +41,7 @@ public class ServiceApplication {
                         .allRequests().denyAll()
                 )
                 .httpBasic(Customizer.withDefaults())
+                .oauth2ResourceServer(Customizer.withDefaults())
                 .preauth(Customizer.withDefaults())
                 .build();
     }
