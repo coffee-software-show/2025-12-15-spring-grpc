@@ -5,9 +5,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 
 import javax.sql.DataSource;
+import java.util.Set;
 
 @SpringBootApplication
 public class AuthApplication {
@@ -16,9 +21,20 @@ public class AuthApplication {
         SpringApplication.run(AuthApplication.class, args);
     }
 
+
     @Bean
-    JdbcUserDetailsManager userDetailsManager(DataSource dataSource) {
-        return new JdbcUserDetailsManager(dataSource);
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean
+    InMemoryUserDetailsManager inMemoryUserDetailsManager(PasswordEncoder pw) {
+        return new InMemoryUserDetailsManager(Set.of(
+            User.withUsername("josh").password(pw.encode("pw")).build(),
+            User.withUsername("dave").password(pw.encode("pw")).build() ,
+            User.withUsername("chris").password(pw.encode("pw")).build() ,
+            User.withUsername("rob").password(pw.encode("pw")).build()
+        ));
     }
 
     @Bean

@@ -26,10 +26,10 @@ public class ServiceApplication {
         SpringApplication.run(ServiceApplication.class, args);
     }
 
-    @Bean
+ /*   @Bean
     JdbcUserDetailsManager jdbcUserDetailsManager(DataSource dataSource) {
         return new JdbcUserDetailsManager(dataSource);
-    }
+    }*/
 
     @Bean
     @GlobalServerInterceptor
@@ -40,9 +40,9 @@ public class ServiceApplication {
                         .methods("grpc.*/*").permitAll()
                         .allRequests().denyAll()
                 )
-                .httpBasic(Customizer.withDefaults())
+             //   .httpBasic(Customizer.withDefaults())
                 .oauth2ResourceServer(Customizer.withDefaults())
-                .preauth(Customizer.withDefaults())
+               // .preauth(Customizer.withDefaults())
                 .build();
     }
 
