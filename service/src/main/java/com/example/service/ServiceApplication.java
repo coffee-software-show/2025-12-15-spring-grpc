@@ -11,6 +11,7 @@ import org.springframework.grpc.server.GlobalServerInterceptor;
 import org.springframework.grpc.server.security.AuthenticationProcessInterceptor;
 import org.springframework.grpc.server.security.GrpcSecurity;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
@@ -23,7 +24,7 @@ import java.util.Objects;
 public class ServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ServiceApplication.class, args);
+        SpringApplication.run(ServiceApplication.class, "--debug=true");
     }
 
  /*   @Bean
@@ -41,7 +42,7 @@ public class ServiceApplication {
                         .allRequests().denyAll()
                 )
              //   .httpBasic(Customizer.withDefaults())
-                .oauth2ResourceServer(Customizer.withDefaults())
+                .oauth2ResourceServer((resourceServer) -> resourceServer.jwt(Customizer.withDefaults()))
                // .preauth(Customizer.withDefaults())
                 .build();
     }
@@ -56,11 +57,10 @@ class GreetingsServiceImpl extends GreetingsServiceGrpc.GreetingsServiceImplBase
 
     @Override
     public void greetings(MessageRequest request, StreamObserver<MessageResponse> responseObserver) {
-        var authentication = Objects.requireNonNull(
-                this.strategy.getContext().getAuthentication());
+        var authentication = this.strategy.getContext().getAuthentication();
         responseObserver
                 .onNext(MessageResponse.newBuilder()
-                        .setMessage("hello, " + authentication.getName() + "!")
+                        .setMessage("hello, " + (authentication == null ? "NULL" : authentication.getName()) + "!")
                         .build());
         responseObserver.onCompleted();
     }
