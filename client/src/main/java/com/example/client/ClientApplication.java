@@ -71,15 +71,12 @@ class GreetingsController {
 
     private final GreetingsServiceGrpc.GreetingsServiceBlockingStub greetingsServiceBlockingStub;
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
-
     GreetingsController(GreetingsServiceGrpc.GreetingsServiceBlockingStub greetingsServiceBlockingStub) {
         this.greetingsServiceBlockingStub = greetingsServiceBlockingStub;
     }
 
     @GetMapping("/")
     Map<String, String> client(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient client) {
-        IO.println("the OAuth 2 client access token is  [" + client.getAccessToken().getTokenValue() + "]");
         var messageRequest = MessageRequest
                 .newBuilder()
                 .setName("hello")

@@ -11,20 +11,15 @@ import org.springframework.grpc.server.GlobalServerInterceptor;
 import org.springframework.grpc.server.security.AuthenticationProcessInterceptor;
 import org.springframework.grpc.server.security.GrpcSecurity;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.stereotype.Service;
-
-import javax.sql.DataSource;
-import java.util.Objects;
 
 @SpringBootApplication
 public class ServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ServiceApplication.class, "--debug=true");
+        SpringApplication.run(ServiceApplication.class, args);
     }
 
  /*   @Bean
@@ -41,9 +36,7 @@ public class ServiceApplication {
                         .methods("grpc.*/*").permitAll()
                         .allRequests().denyAll()
                 )
-             //   .httpBasic(Customizer.withDefaults())
                 .oauth2ResourceServer((resourceServer) -> resourceServer.jwt(Customizer.withDefaults()))
-               // .preauth(Customizer.withDefaults())
                 .build();
     }
 
