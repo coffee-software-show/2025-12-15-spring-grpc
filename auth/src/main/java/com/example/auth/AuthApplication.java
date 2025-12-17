@@ -9,9 +9,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 
-import javax.sql.DataSource;
 import java.util.Set;
 
 @SpringBootApplication
@@ -21,25 +19,35 @@ public class AuthApplication {
         SpringApplication.run(AuthApplication.class, args);
     }
 
+    @Bean
+    Customizer<HttpSecurity> securityCustomizer() {
+        return http -> http
+                .oauth2AuthorizationServer(a -> a.oidc(Customizer.withDefaults()));
+    }
 
     @Bean
     PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
+    // JdbcUserDetailsManager
     @Bean
-    InMemoryUserDetailsManager inMemoryUserDetailsManager(PasswordEncoder pw) {
-        return new InMemoryUserDetailsManager(Set.of(
-            User.withUsername("josh").password(pw.encode("pw")).build(),
-            User.withUsername("dave").password(pw.encode("pw")).build() ,
-            User.withUsername("chris").password(pw.encode("pw")).build() ,
-            User.withUsername("rob").password(pw.encode("pw")).build()
-        ));
+    InMemoryUserDetailsManager userDetailsManager(PasswordEncoder passwordEncoder) {
+        var users = Set.of(
+                User.withUsername("dave")
+                        .roles("USER")
+                        .password(passwordEncoder.encode("pw"))
+                        .build(),
+                User.withUsername("chris")
+                        .roles("USER")
+                        .password(passwordEncoder.encode("pw"))
+                        .build(),
+                User.withUsername("josh")
+                        .roles("USER")
+                        .password(passwordEncoder.encode("pw"))
+                        .build()
+        );
+        return new InMemoryUserDetailsManager(users);
     }
 
-    @Bean
-    Customizer<HttpSecurity> authorizationServer() {
-        return http ->
-                http.oauth2AuthorizationServer(a -> a.oidc(Customizer.withDefaults()));
-    }
 }

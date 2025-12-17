@@ -1,9 +1,7 @@
 package com.example.client;
 
-import com.example.client.grpc.GreetingsServiceGrpc;
-import com.example.client.grpc.MessageRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.example.client.grpc.GreetingRequest;
+import com.example.client.grpc.GreetingServiceGrpc;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -14,9 +12,7 @@ import org.springframework.grpc.client.interceptor.security.BearerTokenAuthentic
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,59 +25,63 @@ import java.util.Objects;
 @SpringBootApplication
 public class ClientApplication {
 
-
     public static void main(String[] args) {
         SpringApplication.run(ClientApplication.class, args);
     }
 
+    private final SecurityContextHolderStrategy strategy =
+            SecurityContextHolder.getContextHolderStrategy();
 
-    private final SecurityContextHolderStrategy strategy = SecurityContextHolder.getContextHolderStrategy();
 
-    @Lazy
-    @Bean
-    GreetingsServiceGrpc.GreetingsServiceBlockingStub greetingsServiceBlockingStub(
-            GrpcChannelFactory channels,
-            OAuth2AuthorizedClientManager authorizedClientManager) {
-        var bearerTokenAuth = new BearerTokenAuthenticationInterceptor(() -> this.token(authorizedClientManager));
-        var options = ChannelBuilderOptions.defaults().withInterceptors(List.of(bearerTokenAuth));
-        var channel = channels.createChannel("0.0.0.0:9090", options);
-        return GreetingsServiceGrpc.newBlockingStub(channel);
-    }
-
-    private String token(OAuth2AuthorizedClientManager authorizedClientManager) {
-        var auth = this.strategy.getContext().getAuthentication();
-        if (auth instanceof OAuth2AuthenticationToken auth2AuthenticationToken) {
+    // todo
+    String token(OAuth2AuthorizedClientManager authorizedClientManager) {
+        var authenticatedUser = this.strategy.getContext().getAuthentication();
+        if (authenticatedUser instanceof OAuth2AuthenticationToken auth2AuthenticationToken) {
             var clientId = auth2AuthenticationToken.getAuthorizedClientRegistrationId();
-            var request = OAuth2AuthorizeRequest
+            var oauthAuthorizationRequest = OAuth2AuthorizeRequest
                     .withClientRegistrationId(clientId)
-                    .principal(auth2AuthenticationToken)
+                    .principal(authenticatedUser)
                     .build();
-            var authorizedClient = authorizedClientManager.authorize(request);
-            return Objects.requireNonNull(authorizedClient).getAccessToken().getTokenValue();
+            var authorized = authorizedClientManager.authorize(oauthAuthorizationRequest);
+            return Objects.requireNonNull(authorized).getAccessToken().getTokenValue();
         }
-        throw new IllegalStateException("could not install JWT token!");
+        return null;
     }
 
-
+    @Bean
+    @Lazy
+    GreetingServiceGrpc.GreetingServiceBlockingStub greetingServiceBlockingStub(
+            GrpcChannelFactory channels,
+            OAuth2AuthorizedClientManager authorizedClientManager
+    ) {
+        var bearerTokenInterceptor = new BearerTokenAuthenticationInterceptor(() -> Objects.requireNonNull(
+                this.token(authorizedClientManager)));
+        var options = ChannelBuilderOptions
+                .defaults()
+                .withInterceptors(List.of(bearerTokenInterceptor));
+        var channel = channels.createChannel("localhost:9090", options);
+        return GreetingServiceGrpc.newBlockingStub(channel);
+    }
 }
 
 @Controller
 @ResponseBody
-class GreetingsController {
+class GreetingClient {
 
-    private final GreetingsServiceGrpc.GreetingsServiceBlockingStub greetingsServiceBlockingStub;
+    private final GreetingServiceGrpc.GreetingServiceBlockingStub client;
 
-    GreetingsController(GreetingsServiceGrpc.GreetingsServiceBlockingStub greetingsServiceBlockingStub) {
-        this.greetingsServiceBlockingStub = greetingsServiceBlockingStub;
+    GreetingClient(GreetingServiceGrpc.GreetingServiceBlockingStub client) {
+        this.client = client;
     }
 
     @GetMapping("/")
-    Map<String, String> client(@RegisteredOAuth2AuthorizedClient OAuth2AuthorizedClient client) {
-        var messageRequest = MessageRequest
+    Map<String, String> message() {
+        var request = GreetingRequest
                 .newBuilder()
-                .setName("hello")
+                .setName("Spring fans")
                 .build();
-        var hello = this.greetingsServiceBlockingStub.greetings(messageRequest);
-        return Map.of("name", hello.getMessage());
+        var msg = this.client.greet(request);
+        return Map.of("message", msg.getMessage());
     }
+
 }

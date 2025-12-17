@@ -1,8 +1,8 @@
 package com.example.service;
 
-import com.example.service.grpc.GreetingsServiceGrpc;
-import com.example.service.grpc.MessageRequest;
-import com.example.service.grpc.MessageResponse;
+import com.example.service.grpc.GreetingRequest;
+import com.example.service.grpc.GreetingResponse;
+import com.example.service.grpc.GreetingServiceGrpc;
 import io.grpc.stub.StreamObserver;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @SpringBootApplication
 public class ServiceApplication {
 
@@ -22,39 +24,42 @@ public class ServiceApplication {
         SpringApplication.run(ServiceApplication.class, args);
     }
 
- /*   @Bean
-    JdbcUserDetailsManager jdbcUserDetailsManager(DataSource dataSource) {
-        return new JdbcUserDetailsManager(dataSource);
-    }*/
-
     @Bean
     @GlobalServerInterceptor
-    AuthenticationProcessInterceptor grpcSecurityFilterChain(GrpcSecurity grpc) throws Exception {
-        return grpc
-                .authorizeRequests(requests -> requests
-                        .methods("GreetingsService/Greetings").authenticated()
-                        .methods("grpc.*/*").permitAll()
-                        .allRequests().denyAll()
+    AuthenticationProcessInterceptor authenticationProcessInterceptor(
+            GrpcSecurity grpcSecurity) throws Exception {
+        return grpcSecurity
+                .authorizeRequests(requests ->
+                        requests
+                                .methods("GreetingService/Greet").authenticated()
+                                .methods("grpc.*/*").permitAll()
+                                .allRequests().denyAll()
                 )
-                .oauth2ResourceServer((resourceServer) -> resourceServer.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(c -> c.jwt(Customizer.withDefaults()))
                 .build();
     }
+
 
 }
 
 @Service
-class GreetingsServiceImpl extends GreetingsServiceGrpc.GreetingsServiceImplBase {
+class DefaultGreetingService extends
+        GreetingServiceGrpc.GreetingServiceImplBase {
 
-    private final SecurityContextHolderStrategy strategy =
+    private final SecurityContextHolderStrategy securityContextHolder =
             SecurityContextHolder.getContextHolderStrategy();
 
     @Override
-    public void greetings(MessageRequest request, StreamObserver<MessageResponse> responseObserver) {
-        var authentication = this.strategy.getContext().getAuthentication();
-        responseObserver
-                .onNext(MessageResponse.newBuilder()
-                        .setMessage("hello, " + (authentication == null ? "NULL" : authentication.getName()) + "!")
-                        .build());
+    public void greet(GreetingRequest request, StreamObserver<GreetingResponse> responseObserver) {
+        var authentication = this.securityContextHolder
+                .getContext().getAuthentication();
+        var name = Objects.requireNonNull(authentication).getName();
+        var message = "Hello, " + name + "!";
+        var response = GreetingResponse
+                .newBuilder()
+                .setMessage(message)
+                .build();
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 }
